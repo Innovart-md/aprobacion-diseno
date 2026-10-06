@@ -49,7 +49,7 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .lab{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .row1 .lab.big{font-size:1rem;letter-spacing:.08em}
 
-input[type=text],input[type=date],input[type=number],input[type=email],input[type=password],textarea{
+input[type=text],input[type=date],input[type=number],input[type=email],input[type=password],input[type=tel],textarea{
   width:100%;font:inherit;color:var(--ink);background:var(--field);
   border:1px solid transparent;border-radius:3px;padding:8px 10px;min-height:40px}
 textarea{resize:vertical;min-height:70px}
@@ -369,13 +369,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <input type="text" id="vendedor" placeholder="Tu nombre">
     <label class="lab" for="correoV">Tu correo · te avisamos cuando el cliente firme</label>
     <input type="email" id="correoV" placeholder="nombre@correo.com" autocomplete="email">
+    <label class="lab" for="waC">WhatsApp del cliente · 10 dígitos</label>
+    <input type="tel" id="waC" inputmode="numeric" placeholder="477 123 4567" autocomplete="off">
     <button type="button" class="primary" id="generar">Generar enlace para cliente</button>
     <div class="vres" id="vres" hidden>
       <span class="lab">Enlace para el cliente</span>
       <input type="text" id="vlink" readonly>
       <div class="vbtns">
         <button type="button" class="primary" id="copiar">Copiar enlace</button>
-        <button type="button" id="wa">Enviar por WhatsApp</button>
+        <button type="button" id="wa">Enviar enlace por WhatsApp</button>
         <button type="button" id="nuevarev" hidden>Crear nueva revisión</button>
         <button type="button" id="nuevo">Nuevo formato</button>
       </div>
@@ -767,6 +769,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
     let j;try{j=await res.json();}catch(e){throw new Error('respuesta');}
     if(!j.ok){const err=new Error(j.error||'error');err.server=j.error;throw err;}
     return j;}
+  function telDig(x){return String(x||'').replace(/\D/g,'');}
+  function telOk(x){const d=telDig(x);return d.length===10||(d.length>=12&&d.length<=13);}
+  function waUrl(texto){const d=telDig($('waC').value);const n=d.length===10?'52'+d:d;
+    return 'https://wa.me/'+(telOk(d)?n:'')+'?text='+encodeURIComponent(texto);}
   function correoOk(x){return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(x||'').trim());}
   function fixedRO(){['folio','fecha','cliente','codigo','rev'].forEach(id=>{$(id).readOnly=true;});}
   function gmsg(t,k){const m=$('gmsg');m.textContent=t;m.className='msg '+(k||'');}
@@ -867,6 +873,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   function limpiarFormulario(){
     ['folio','cliente','codigo','vendedor','nota','rev'].forEach(id=>{$(id).value='';$(id).readOnly=false;$(id).classList.remove('invalid');});
     $('rev').readOnly=true;$('revnota').textContent='';$('nuevarev').hidden=true;
+    $('folio').readOnly=true;$('folio').placeholder='Automático';$('waC').value='';$('waC').classList.remove('invalid');
     $('correoV').classList.remove('invalid');
     try{const c=localStorage.getItem('innovart_correo');if(c)$('correoV').value=c;}catch(e){}
     try{const d=new Date();fecha.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}catch(e){}
@@ -875,7 +882,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     planos.innerHTML='';$('planos2').innerHTML='';$('planosFin').innerHTML='';
     signed=false;document.body.classList.remove('signed');drop.style.display='';drop.classList.remove('invalid');
     $('vres').hidden=true;$('estadoBox').hidden=true;$('incorp').hidden=true;$('finalBox').hidden=true;$('avisar').hidden=true;
-    $('vend').hidden=false;$('generar').hidden=false;$('generar').textContent='Generar enlace para cliente';
+    $('vend').hidden=false;$('generar').hidden=false;$('generar').textContent='Generar enlace para cliente';$('wa').textContent='Enviar enlace por WhatsApp';
     $('vestado').innerHTML='';msg('');CUR=null;CURDATA=null;
   }
   function mostrarFormulario(){document.body.classList.add('editing');$('backbar').hidden=false;window.scrollTo(0,0);}
@@ -885,11 +892,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
       const d=await api('abrir',{clave:CLAVE,token});
       limpiarFormulario();CUR=token;CURDATA=d;
       $('folio').value=d.folio;fecha.value=d.fecha;$('cliente').value=d.cliente;$('codigo').value=d.codigo||'';$('vendedor').value=d.vendedor||'';$('rev').value=d.revision||'A';
-      $('correoV').value=d.correoVendedor||$('correoV').value;
+      $('correoV').value=d.correoVendedor||$('correoV').value;$('waC').value=d.whatsapp||'';
       if(d.folioAnterior){$('revnota').textContent='Rev '+d.revision+' del proyecto '+d.codigo+', viene del folio '+d.folioAnterior+'.';}
       (d.planos||[]).forEach(p=>addItem(p.src,p.cap));
       $('vestado').appendChild(badge(d.estado));
       $('vlink').value=d.enlace||BASE+'?f='+token;$('vres').hidden=false;
+      $('wa').textContent={'Pendiente':'Enviar enlace por WhatsApp','Firmado':'Confirmar recepción por WhatsApp','Firmado con observaciones':'Avisar que estamos incorporando','Observaciones incorporadas':'Avisar al cliente por WhatsApp'}[d.estado]||'Enviar por WhatsApp';
       if(d.estado==='Pendiente'){
         $('generar').textContent='Guardar cambios';
         // el código solo se cambia si el proyecto tiene una sola revisión
@@ -921,31 +929,33 @@ button:disabled{opacity:.45;cursor:not-allowed}
       const d=CURDATA;limpiarFormulario();
       $('cliente').value=d.cliente;$('codigo').value=d.codigo;$('codigo').readOnly=true;if(d.vendedor)$('vendedor').value=d.vendedor;
       notaRevision();$('vestado').appendChild(badge('Nueva revisión'));mostrarFormulario();
-      msg('Asigna el siguiente folio, sube el plano actualizado y guarda.','ok');$('folio').focus();});
+      if(d.whatsapp)$('waC').value=d.whatsapp;
+      msg('El folio se asigna solo al guardar. Sube el plano actualizado y guarda.','ok');});
     $('vrecargar').addEventListener('click',cargarLista);
     $('vnuevo').addEventListener('click',()=>{limpiarFormulario();mostrarFormulario();$('vestado').appendChild(badge('Nuevo'));});
     $('volver').addEventListener('click',()=>{document.body.classList.remove('editing');$('backbar').hidden=true;msg('');cargarLista();window.scrollTo(0,0);});
 
     $('generar').addEventListener('click',async()=>{
-      const need=['folio','fecha','cliente','codigo'].map($).filter(i=>!i.value.trim());
+      const need=['fecha','cliente','codigo'].map($).filter(i=>!i.value.trim());
       need.forEach(i=>i.classList.add('invalid'));
       const hay=planos.children.length>0;if(!hay)drop.classList.add('invalid');
-      const malos=['correoV'].map($).filter(i=>i.value.trim()&&!correoOk(i.value));malos.forEach(i=>i.classList.add('invalid'));
-      if(malos.length&&!need.length&&hay){msg('Revisa el formato del correo marcado.','err');return;}
-      if(need.length||!hay){msg('Para guardar, '+[need.length?'completa folio, fecha, cliente y código de diseño':'',hay?'':'adjunta el plano'].filter(Boolean).join(' y ')+'.','err');return;}
+      const malos=['correoV'].map($).filter(i=>i.value.trim()&&!correoOk(i.value));
+      if($('waC').value.trim()&&!telOk($('waC').value))malos.push($('waC'));malos.forEach(i=>i.classList.add('invalid'));
+      if(malos.length&&!need.length&&hay){msg('Revisa el dato marcado: el correo o el WhatsApp (10 dígitos).','err');return;}
+      if(need.length||!hay){msg('Para guardar, '+[need.length?'completa fecha, cliente y código de diseño':'',hay?'':'adjunta el plano'].filter(Boolean).join(' y ')+'.','err');return;}
       const btn=$('generar');btn.disabled=true;msg('Guardando en Drive…');
       try{
         const datos={clave:CLAVE,folio:$('folio').value.trim(),fecha:$('fecha').value,cliente:$('cliente').value.trim(),
           codigo:$('codigo').value.trim(),vendedor:$('vendedor').value.trim(),correoVendedor:$('correoV').value.trim(),
-          planos:await planosParaEnviar(planos)};
+          whatsapp:telDig($('waC').value),planos:await planosParaEnviar(planos)};
         const r=CUR?await api('editar',Object.assign({token:CUR},datos)):await api('crear',Object.assign({base:BASE},datos));
-        const nuevo=!CUR;CUR=r.token;
+        const nuevo=!CUR;CUR=r.token;if(r.folio)$('folio').value=r.folio;
         $('vlink').value=r.enlace||BASE+'?f='+r.token;$('vres').hidden=false;btn.textContent='Guardar cambios';
         $('rev').value=r.revision||'A';$('revnota').className='revnota';
         $('revnota').textContent=r.folioAnterior?'Rev '+r.revision+' del proyecto '+$('codigo').value.trim()+', viene del folio '+r.folioAnterior+'.':'';
         if(nuevo){LISTA.push({folio:$('folio').value.trim(),cliente:$('cliente').value.trim(),codigo:$('codigo').value.trim(),revision:r.revision||'A',estado:'Pendiente',token:r.token,editado:Date.now()});}
         $('vestado').innerHTML='';$('vestado').appendChild(badge('Pendiente'));
-        msg(nuevo?'Listo: el formato quedó guardado en Drive. Comparte el enlace con el cliente.':'Cambios guardados. El cliente verá la versión actualizada en el mismo enlace.','ok');
+        msg(nuevo?'Listo: se asignó el folio '+$('folio').value+'. Envía el enlace al cliente por WhatsApp.':'Cambios guardados. El cliente verá la versión actualizada en el mismo enlace.','ok');
       }catch(e){
         msg({clave:'La clave ya no es válida. Recarga la página y vuelve a entrar.',folio_existe:'Ya existe un formato con ese folio. Búscalo en la lista para editarlo.',
           no_editable:'Este formato ya fue firmado y no se puede editar.',
@@ -959,12 +969,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
       try{await navigator.clipboard.writeText(t);}catch(e){$('vlink').select();try{document.execCommand('copy');}catch(x){}}
       msg('Enlace copiado.','ok');});
     $('wa').addEventListener('click',()=>{
-      const t='Le compartimos el formato de aprobación de diseño (folio '+$('folio').value.trim()+'):\n'+$('vlink').value+'\n\nPor favor ábralo en su navegador, revise el plano y los términos, y firme. Innovart recibirá su aprobación automáticamente.';
-      window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');});
+      const est=(CURDATA&&CURDATA.estado)||'Pendiente',fol=$('folio').value.trim(),lk=$('vlink').value;
+      const t={'Pendiente':'Hola. Le compartimos el formato de aprobación de diseño (folio '+fol+'):\n'+lk+'\n\nPor favor ábralo en su navegador, revise el plano y los términos, y firme. Innovart recibirá su aprobación automáticamente.',
+        'Firmado':'Hola. Recibimos su aprobación del diseño (folio '+fol+'). Gracias. Puede consultarla aquí:\n'+lk,
+        'Firmado con observaciones':'Hola. Recibimos su aprobación del diseño (folio '+fol+') con sus observaciones. Las estamos incorporando y le avisaremos por este medio.\n'+lk,
+        'Observaciones incorporadas':'Hola. Le informamos que Innovart incorporó sus observaciones al diseño del folio '+fol+'.\nPuede consultar la confirmación y el plano final aquí:\n'+lk+'\n\nGracias por su aprobación.'}[est]||lk;
+      window.open(waUrl(t),'_blank');});
     $('nuevo').addEventListener('click',()=>{limpiarFormulario();$('vestado').appendChild(badge('Nuevo'));window.scrollTo(0,0);});
     $('avisar').addEventListener('click',()=>{
       const t='Hola. Le informamos que Innovart incorporó sus observaciones al diseño del folio '+$('folio').value.trim()+'.\nPuede consultar la confirmación y el plano final aquí:\n'+$('vlink').value+'\n\nGracias por su aprobación.';
-      window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');});
+      window.open(waUrl(t),'_blank');});
+    $('waC').addEventListener('input',()=>$('waC').classList.remove('invalid'));
 
     $('incorporar').addEventListener('click',async()=>{
       const nota=$('nota').value.trim();
