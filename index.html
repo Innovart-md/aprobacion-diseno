@@ -42,7 +42,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
 
 /* Rejilla de campos */
 .grid{border:2px solid var(--line);display:grid}
-.row1{grid-template-columns:2fr 1fr}
+.row1{grid-template-columns:2fr 1.3fr 110px}
+.revcell input{text-align:center;font-weight:700}
 .row2{grid-template-columns:.8fr 1.25fr .75fr 1fr 1fr;border-top:0}
 .cell{padding:10px 12px 12px;min-width:0}
 .row1 .cell+.cell,.row2 .cell+.cell{border-left:1.5px solid var(--line)}
@@ -187,7 +188,6 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .revnota{font-size:.8rem;color:var(--muted);margin-top:4px}
 .revnota:empty{display:none}
 .revnota.err{color:var(--err)}
-.modo-local .revf{display:none}
 /* Celular */
 @media (max-width:720px){
   .wrap{padding:12px 10px 28px}
@@ -197,8 +197,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
   .logo{width:170px}
   .meta{grid-template-columns:auto 1fr;width:100%}
   .meta label{text-align:left}
-  .row1{grid-template-columns:1fr}
+  .row1{grid-template-columns:1fr 96px}
+  .row1 .cell:first-child{grid-column:1 / -1}
   .row1 .cell+.cell{border-left:0;border-top:1.5px solid var(--line)}
+  .row1 .revcell{border-left:1.5px solid var(--line)!important}
   .row2{grid-template-columns:1fr 1fr}
   .row2 .cell{border-left:0!important;border-top:1.5px solid var(--line)}
   .row2 .cell:nth-child(even){border-left:1.5px solid var(--line)!important}
@@ -228,7 +230,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
   .revnota{display:none}
   .meta input{height:auto;min-height:0;width:1.1in}
   .logo{width:1.45in;padding:0}
-  .row1{grid-template-columns:2fr 1fr}
+  .row1{grid-template-columns:2fr 1.3fr .6fr}
+  .row1 .cell:first-child{grid-column:auto}
   .row2{grid-template-columns:.8fr 1.2fr .7fr 1fr 1fr}
   .row1 .cell+.cell,.row2 .cell+.cell{border-left:1px solid #000!important;border-top:0!important}
   .row2 .cell:first-child{grid-column:auto}
@@ -313,13 +316,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="meta">
       <label for="folio">Folio</label><input type="text" id="folio" data-req autocomplete="off">
       <label for="fecha">Fecha</label><input type="date" id="fecha" data-req>
-      <label for="rev" class="revf">Rev.</label><input type="text" id="rev" class="revf" readonly placeholder="Auto">
     </div>
   </header>
 
   <section class="grid row1">
     <div class="cell"><label class="lab big" for="cliente">Cliente</label><input type="text" id="cliente" data-req></div>
     <div class="cell"><label class="lab" for="codigo">Código de diseño</label><input type="text" id="codigo" autocomplete="off"><div class="revnota" id="revnota"></div></div>
+    <div class="cell revcell"><label class="lab" for="rev">Revisión</label><input type="text" id="rev" placeholder="Auto" value="A" autocomplete="off"></div>
   </section>
 
   <section class="plano">
@@ -643,7 +646,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     page.drawImage(logo,{x:M,y:y-lh,width:lw,height:lh});
     const t='Formato de aprobación de diseño';
     page.drawText(safe(t,B),{x:W-M-B.widthOfTextAtSize(t,10.5),y:y-12,size:10.5,font:B,color:ink});
-    const meta=[['Folio',folio],['Fecha',fechaTxt]];if(v('rev'))meta.push(['Rev.',v('rev')]);let my=y-26;
+    const meta=[['Folio',folio],['Fecha',fechaTxt]];let my=y-26;
     meta.forEach(([k,val])=>{const tv=safe(val,F),w=F.widthOfTextAtSize(tv,8.5);
       page.drawText(tv,{x:W-M-w,y:my,size:8.5,font:F,color:ink});
       page.drawText(k,{x:W-M-w-6-F.widthOfTextAtSize(k,7.5),y:my,size:7.5,font:F,color:grey});my-=12;});
@@ -651,10 +654,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
     // Cliente
     box(M,y-30,CW,30,1.4);label('Cliente',M+6,y-9);
-    const codigo=v('codigo'),cw1=codigo?CW*0.62:CW;
+    const codigo=v('codigo'),rev=v('rev'),rw=rev?CW*0.14:0,cw1=codigo?CW*0.52:CW-rw;
     page.drawText(wrap(safe(cliente,F),F,9.5,cw1-12)[0]||'',{x:M+6,y:y-23,size:9.5,font:F,color:ink});
     if(codigo){page.drawLine({start:{x:M+cw1,y:y},end:{x:M+cw1,y:y-30},thickness:1,color:ink});label('Código de diseño',M+cw1+6,y-9);
-      page.drawText(wrap(safe(codigo,F),F,8.5,CW-cw1-12)[0]||'',{x:M+cw1+6,y:y-23,size:8.5,font:F,color:ink});}
+      page.drawText(wrap(safe(codigo,F),F,8.5,CW-cw1-rw-12)[0]||'',{x:M+cw1+6,y:y-23,size:8.5,font:F,color:ink});}
+    if(rev){const rx=M+CW-rw;page.drawLine({start:{x:rx,y:y},end:{x:rx,y:y-30},thickness:1,color:ink});label('Revisión',rx+6,y-9);
+      page.drawText(safe(rev,B),{x:rx+6,y:y-23,size:9.5,font:B,color:ink});}
     y-=40;
 
     // ---- Medidas de la hoja 1 (todo lo que se firma va en la primera hoja) ----
@@ -862,7 +867,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   function notaRevision(){
     const n=$('revnota');n.textContent='';n.className='revnota';
     if(CUR)return;
-    const k=$('codigo').value.trim().toLowerCase();if(!k){$('rev').value='';return;}
+    const k=$('codigo').value.trim().toLowerCase();if(!k){$('rev').value='A';return;}
     const x=grupos().find(g=>g.codigo.trim().toLowerCase()===k);
     if(!x){$('rev').value='A';return;}
     const pend=x.items.find(i=>i.estado==='Pendiente');
@@ -884,6 +889,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
     $('vres').hidden=true;$('estadoBox').hidden=true;$('incorp').hidden=true;$('finalBox').hidden=true;$('avisar').hidden=true;
     $('vend').hidden=false;$('generar').hidden=false;$('generar').textContent='Generar enlace para cliente';$('wa').textContent='Enviar enlace por WhatsApp';
     $('vestado').innerHTML='';msg('');CUR=null;CURDATA=null;
+  }
+  async function prefolio(){
+    $('folio').value='';$('folio').placeholder='Asignando…';
+    try{const r=await api('siguiente',{clave:CLAVE});if(!CUR)$('folio').value=r.folio;}
+    catch(e){$('folio').placeholder='Automático';}
   }
   function mostrarFormulario(){document.body.classList.add('editing');$('backbar').hidden=false;window.scrollTo(0,0);}
   async function abrir(token){
@@ -930,9 +940,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
       $('cliente').value=d.cliente;$('codigo').value=d.codigo;$('codigo').readOnly=true;if(d.vendedor)$('vendedor').value=d.vendedor;
       notaRevision();$('vestado').appendChild(badge('Nueva revisión'));mostrarFormulario();
       if(d.whatsapp)$('waC').value=d.whatsapp;
-      msg('El folio se asigna solo al guardar. Sube el plano actualizado y guarda.','ok');});
+      prefolio();msg('Sube el plano actualizado y guarda.','ok');});
     $('vrecargar').addEventListener('click',cargarLista);
-    $('vnuevo').addEventListener('click',()=>{limpiarFormulario();mostrarFormulario();$('vestado').appendChild(badge('Nuevo'));});
+    $('vnuevo').addEventListener('click',()=>{limpiarFormulario();mostrarFormulario();$('vestado').appendChild(badge('Nuevo'));$('rev').value='A';prefolio();});
     $('volver').addEventListener('click',()=>{document.body.classList.remove('editing');$('backbar').hidden=true;msg('');cargarLista();window.scrollTo(0,0);});
 
     $('generar').addEventListener('click',async()=>{
@@ -975,7 +985,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
         'Firmado con observaciones':'Hola. Recibimos su aprobación del diseño (folio '+fol+') con sus observaciones. Las estamos incorporando y le avisaremos por este medio.\n'+lk,
         'Observaciones incorporadas':'Hola. Le informamos que Innovart incorporó sus observaciones al diseño del folio '+fol+'.\nPuede consultar la confirmación y el plano final aquí:\n'+lk+'\n\nGracias por su aprobación.'}[est]||lk;
       window.open(waUrl(t),'_blank');});
-    $('nuevo').addEventListener('click',()=>{limpiarFormulario();$('vestado').appendChild(badge('Nuevo'));window.scrollTo(0,0);});
+    $('nuevo').addEventListener('click',()=>{limpiarFormulario();$('vestado').appendChild(badge('Nuevo'));$('rev').value='A';prefolio();window.scrollTo(0,0);});
     $('avisar').addEventListener('click',()=>{
       const t='Hola. Le informamos que Innovart incorporó sus observaciones al diseño del folio '+$('folio').value.trim()+'.\nPuede consultar la confirmación y el plano final aquí:\n'+$('vlink').value+'\n\nGracias por su aprobación.';
       window.open(waUrl(t),'_blank');});
