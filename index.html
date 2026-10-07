@@ -269,6 +269,25 @@ button:disabled{opacity:.45;cursor:not-allowed}
   .pad .state{font-size:6pt}
 }
 .quien{font-size:13px;color:#6b6b6b;margin-top:2px}
+
+.adjuntos{margin-top:14px}
+.adjlist{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.adj{display:flex;align-items:center;gap:10px;border:1px solid var(--soft);border-radius:3px;padding:8px 10px;font-size:.92rem}
+.adj .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adj .t{color:var(--muted);font-size:.82rem}
+.adj button{padding:6px 10px;font-size:.85rem}
+.adjctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:2px}
+.adjctl select{padding:8px;border:1px solid var(--soft);border-radius:3px;font:inherit;background:transparent;color:inherit}
+.adj .h{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;color:var(--muted)}
+.adj .o{font-size:.78rem;border:1px solid var(--soft);border-radius:10px;padding:1px 8px;color:var(--muted)}
+.adjnota{color:var(--muted);font-size:.82rem;margin-top:4px}
+.modo-cliente .adjctl,.modo-cliente .adjnota,.signed #adjBox .adjctl #adjorigen,.signed #adjBox .adjctl #adjadd,.signed #adjBox .adjnota,.modo-cliente .adj .x,.signed #adjBox .adj .x{display:none}
+.adjuntos.vacio.solo-ver{display:none}
+.stepcli{margin-top:14px}
+.accept[hidden],[hidden]{display:none!important}
+.modo-cliente:not(.signed):not(.closed) #adjlistC .adj .x{display:inline-block}
+.signed #adjaddC,.signed #adjlistC .x{display:none}
+@media print{.adjuntos{display:none}}
 </style>
 <script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -339,12 +358,27 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <input type="file" id="file" accept="image/*,application/pdf,.pdf" multiple hidden>
   </section>
 
+  <section class="adjuntos" id="adjBox">
+    <span class="lab">Archivo 3D (STEP) · se envía por WhatsApp</span>
+    <div class="adjlist" id="adjlist"></div>
+    <div class="adjctl" id="adjctl">
+      <select id="adjorigen" aria-label="Origen del archivo"><option value="Innovart">Elaborado por Innovart</option><option value="Cliente">Elaborado por el cliente</option></select>
+      <button type="button" class="adjadd" id="adjadd">+ Registrar archivo STEP</button>
+      <button type="button" class="adjcheck" id="adjcheck">Comprobar un STEP</button>
+    </div>
+    <input type="file" id="adjfile" accept=".step,.stp,.STEP,.STP" multiple hidden>
+    <input type="file" id="chkfile" accept=".step,.stp,.STEP,.STP" hidden>
+    <div class="adjnota" id="adjnota">El archivo no se sube: solo se registra su huella digital. Mándalo por WhatsApp en el mismo chat del enlace.</div>
+    <div class="msg" id="adjmsg" role="status"></div>
+  </section>
+
   <section class="info" id="estadoBox" hidden>
     <span class="lab">Aprobación del cliente</span>
     <div class="row"><b>Estado</b><span id="eEstado"></span></div>
     <div class="row"><b>Firmado el</b><span id="eFecha"></span></div>
     <div class="row"><b>Firmó</b><span id="eFirmo"></span></div>
     <div class="row"><b>Observaciones</b><span class="obstxt" id="eObs"></span></div>
+    <div class="row" id="eStepRow" hidden><b>STEP del cliente</b><span><span class="adjlist" id="adjlistCV"></span></span></div>
   </section>
 
   <section class="info incorp" id="incorp" hidden>
@@ -356,6 +390,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <span class="sub">Imagen (PNG, JPG) o PDF.</span>
     </div>
     <input type="file" id="file2" accept="image/*,application/pdf,.pdf" multiple hidden>
+    <span class="lab">STEP final (opcional)</span>
+    <div class="adjlist" id="adjlistF"></div>
+    <div class="adjctl"><select id="adjorigenF" aria-label="Origen del STEP final"><option value="Cliente">Elaborado por el cliente</option><option value="Innovart">Elaborado por Innovart</option></select>
+      <button type="button" class="adjadd" id="adjaddF">+ Registrar STEP final</button></div>
+    <input type="file" id="adjfileF" accept=".step,.stp,.STEP,.STP" multiple hidden>
     <label class="lab" for="nota">Qué se incorporó</label>
     <textarea id="nota" placeholder="Ej. Se cambió el barreno central a Ø10 mm como lo solicitó."></textarea>
     <button type="button" class="primary" id="incorporar">Confirmar incorporación</button>
@@ -367,6 +406,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="row"><b>Qué se incorporó</b><span class="obstxt" id="fNota"></span></div>
     <span class="lab">Plano final</span>
     <div class="planos" id="planosFin"></div>
+    <div class="adjlist" id="adjlistFin"></div>
     <button type="button" class="primary" id="avisar" hidden>Avisar al cliente por WhatsApp</button>
   </section>
 
@@ -385,6 +425,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
         <button type="button" class="primary" id="copiar">Copiar enlace</button>
         <button type="button" id="wa">Enviar enlace por WhatsApp</button>
         <button type="button" id="nuevarev" hidden>Crear nueva revisión</button>
+        <button type="button" id="liberar" hidden>Liberar enlace</button>
         <button type="button" id="nuevo">Nuevo formato</button>
       </div>
     </div>
@@ -394,6 +435,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <label class="lab" for="observaciones">Observaciones y notas</label>
     <p class="obs-help no-print">Anota aquí los cambios finales al diseño. Lo que quede escrito al firmar es definitivo.</p>
     <textarea id="observaciones" rows="4" placeholder="Ej. Cambiar barreno central a Ø10 mm; sin pintura en la base"></textarea>
+    <div class="stepcli no-print" id="stepCli">
+      <span class="lab">¿Envías tu propio archivo STEP? · opcional</span>
+      <p class="obs-help">Si tienes un STEP con tus cambios, regístralo aquí y mándalo por WhatsApp a tu vendedor. El archivo no se sube: solo se guarda su huella digital, para que Innovart compruebe que usa exactamente el que tú indicaste.</p>
+      <div class="adjlist" id="adjlistC"></div>
+      <button type="button" class="adjadd" id="adjaddC">+ Registrar mi STEP</button>
+      <input type="file" id="adjfileC" accept=".step,.stp,.STEP,.STP" multiple hidden>
+      <label class="accept" id="acceptCliRow" hidden><input type="checkbox" id="aceptoCli"><span>Confirmo que este STEP es el correcto y definitivo, y lo envío por WhatsApp a mi vendedor.</span></label>
+    </div>
   </section>
 
   <section class="terms">
@@ -406,6 +455,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <li>Innovart notificará la incorporación de las observaciones; el plano final emitido se considera conforme a lo solicitado por el cliente.</li>
     </ol>
     <label class="accept" id="acceptRow"><input type="checkbox" id="acepto"><span>He leído y acepto los términos y condiciones, y apruebo el diseño del plano adjunto.</span></label>
+    <label class="accept" id="acceptStepRow" hidden><input type="checkbox" id="aceptoStep"><span>Recibí por WhatsApp el archivo 3D (STEP) indicado arriba y forma parte de lo que apruebo.</span></label>
   </section>
 
   <section class="sign">
@@ -559,10 +609,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
   reqs.forEach(i=>i.addEventListener('input',()=>{i.classList.remove('invalid');clearErr();}));
   function clearErr(){const m=$('msg');if(m.classList.contains('err'))msg('');}
   $('acepto').addEventListener('change',()=>{$('acceptRow').classList.remove('invalid');clearErr();});
+  $('aceptoStep').addEventListener('change',()=>{$('acceptStepRow').classList.remove('invalid');clearErr();});
 
   function lock(on){
     document.querySelectorAll('input[type=text],input[type=date],textarea').forEach(i=>i.readOnly=on);
-    $('acepto').disabled=on;drop.style.display=on?'none':'';document.body.classList.toggle('signed',on);
+    $('acepto').disabled=on;$('aceptoStep').disabled=on;$('aceptoCli').disabled=on;drop.style.display=on?'none':'';document.body.classList.toggle('signed',on);
     $('firmar').hidden=on;$('guardar').hidden=!on;canvas.style.cursor=on?'default':'crosshair';
     if(MODE==='cliente')fixedRO();
   }
@@ -572,12 +623,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
     reqs.forEach(i=>{if(!i.value.trim()){i.classList.add('invalid');faltan.push(i);}});
     const hayPlano=planos.children.length>0;if(!hayPlano)drop.classList.add('invalid');
     const ok=$('acepto').checked; if(!ok)$('acceptRow').classList.add('invalid');
+    const okStep=!ADJ.length||MODE!=='cliente'||$('aceptoStep').checked;if(!okStep)$('acceptStepRow').classList.add('invalid');
+    const okCli=!ADJC.length||$('aceptoCli').checked;if(!okCli)$('acceptCliRow').classList.add('invalid');
     if(!hasInk)pad.classList.add('invalid');
-    if(faltan.length||!ok||!hasInk||!hayPlano){
+    if(faltan.length||!ok||!okStep||!okCli||!hasInk||!hayPlano){
       const partes=[];
       if(faltan.length)partes.push('completa los campos marcados');
       if(!hayPlano)partes.push('adjunta el plano');
       if(!ok)partes.push('acepta los términos');
+      if(!okStep)partes.push('confirma que recibiste el archivo 3D por WhatsApp');
+      if(!okCli)partes.push('confirma que tu STEP es el definitivo (o quítalo)');
       if(!hasInk)partes.push('firma en el recuadro');
       msg('Para aprobar, '+partes.join(', ')+'.','err');
       (faltan[0]||(!hayPlano?drop:(!ok?$('acepto'):canvas))).scrollIntoView({behavior:'smooth',block:'center'});
@@ -667,10 +722,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
     // ---- Medidas de la hoja 1 (todo lo que se firma va en la primera hoja) ----
     const items=[...planos.querySelectorAll('.pl')];
-    const obsAll=wrap(safe(v('observaciones')||'Sin observaciones.',F),F,8,CW-12);
+    const obsAll=wrap(safe(v('observaciones')||(ADJC.length?'El cliente envía su propio STEP por WhatsApp: '+ADJC.map(a=>a.nombre).join(', '):'Sin observaciones.'),F),F,8,CW-12);
     const tl=TERMS.map(t=>wrap(safe(t,F),F,6.6,CW-12));
     const termsH=16+tl.reduce((a,l)=>a+l.length*8.2+2,0)+4;
-    const acc=wrap(safe(document.querySelector('.accept span').textContent.trim(),F),F,6.6,CW-12);
+    const acc=wrap(safe(document.querySelector('#acceptRow span').textContent.trim(),F),F,6.6,CW-12);
     const accH=acc.length*8.2+8, sigH=80;
     const bottom=M+14;
     const fixedBelow=termsH+accH+sigH;
@@ -680,7 +735,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
     let obs1=obsAll.slice(0,obsLines),obsRest=obsAll.slice(obsLines);
     if(obsRest.length){obs1=obsAll.slice(0,obsLines-1);obsRest=obsAll.slice(obsLines-1);obs1.push('(Continúa en el anexo)');}
     const obsH=Math.max(obs1.length*10.5+20,54);
-    const planoH=y-bottom-fixedBelow-obsH-10-12-20;
+    const stepL=Math.min(ADJ.length,3)+(ADJ.length?1:0)+Math.min(ADJC.length,3);
+    const planoH=y-bottom-fixedBelow-obsH-10-12-20-stepL*8;
 
     // Plano principal
     label('Plano',M,y-6);y-=12;
@@ -695,6 +751,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
     let cap=items.length?items[0].querySelector('.cap').textContent:'';
     if(anexos>0)cap+='   +'+anexos+(anexos===1?' hoja de plano en el anexo':' hojas de plano en el anexo');
     page.drawText(safe(cap,F).slice(0,140),{x:M,y:y-8,size:5.8,font:F,color:grey});y-=20;
+    const linea=(t,neg)=>{const fnt=neg?B:F;let sz=5.2;const w=fnt.widthOfTextAtSize(t,sz);if(w>CW)sz=sz*CW/w;page.drawText(t,{x:M,y:y+2,size:sz,font:fnt,color:neg?ink:grey});y-=8;};
+    ADJC.slice(0,3).forEach(a=>linea(safe('STEP definitivo del cliente (enviado por WhatsApp): '+a.nombre.slice(0,60)+' · '+tamBonito(a.tam)+' · Elaborado por el cliente  ·  SHA-256 '+a.huella,B),true));
+    if(ADJ.length){
+      ADJ.slice(0,3).forEach(a=>linea(safe('Archivo 3D (enviado por WhatsApp): '+a.nombre.slice(0,60)+' · '+tamBonito(a.tam)+' · '+origenTxt(a)+'  ·  SHA-256 '+a.huella,F)));
+      linea(safe(signed&&$('aceptoStep').checked?'El cliente confirmó que recibió por WhatsApp el archivo 3D indicado y que forma parte de lo que aprueba.':'El archivo 3D se envía por WhatsApp; su huella SHA-256 permite comprobar que es exactamente el aprobado.',B),true);
+    }
 
     // Observaciones
     box(M,y-obsH,CW,obsH,1.2);label('Observaciones y notas',M+6,y-9);
@@ -772,8 +834,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
   });
 
   /* ---------- Conexión con Google Drive de Innovart ---------- */
+  // Identificador de este dispositivo (sirve para ligar el enlace del cliente y para el bloqueo por intentos)
+  const DISP=(()=>{const nuevo=()=>{const a=new Uint8Array(12);crypto.getRandomValues(a);return Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');};
+    try{let x=localStorage.getItem('innovart_disp');if(!x||x.length<12){x=nuevo();localStorage.setItem('innovart_disp',x);}return x;}catch(e){return nuevo();}})();
   async function api(action,data){
-    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action},data||{}))});
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,dispositivo:DISP},data||{}))});
     let j;try{j=await res.json();}catch(e){throw new Error('respuesta');}
     if(!j.ok){const err=new Error(j.error||'error');err.server=j.error;err.data=j;throw err;}
     return j;}
@@ -804,10 +869,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
       $('eFecha').textContent=d.firmadoEl||'—';
       $('eFirmo').textContent=[d.nombre,d.puesto].filter(Boolean).join(' · ')||'—';
       $('eObs').textContent=d.observaciones||'Sin observaciones.';
+      $('eStepRow').hidden=!(d.archivosCliente||[]).length;pintarSteps($('adjlistCV'),d.archivosCliente||[],false);
     }
     const inc=d.estado==='Observaciones incorporadas';
     $('finalBox').hidden=!inc;
-    $('planosFin').innerHTML='';
+    $('planosFin').innerHTML='';pintarSteps($('adjlistFin'),inc?(d.archivosFinal||[]):[],false);
     if(inc){
       $('fFecha').textContent=d.incorporadoEl||'—';
       $('fNota').textContent=d.nota||'';
@@ -815,8 +881,69 @@ button:disabled{opacity:.45;cursor:not-allowed}
     }
   }
 
+  // ----- Archivos STEP: se mandan por WhatsApp; aquí solo se registra su huella (SHA-256) -----
+  let ADJ=[],ADJF=[],ADJC=[];
+  function origenTxt(a){return a.origen==='Cliente'?'Elaborado por el cliente':'Elaborado por Innovart';}
+  function tamBonito(b){return b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';}
+  async function huellaDe(f){const h=await crypto.subtle.digest('SHA-256',await f.arrayBuffer());return Array.from(new Uint8Array(h),b=>b.toString(16).padStart(2,'0')).join('');}
+  function pintarSteps(box,lista,editable){
+    box.innerHTML='';
+    lista.forEach((a,i)=>{
+      const r=document.createElement('div');r.className='adj';
+      const n=document.createElement('span');n.className='n';n.textContent=a.nombre;
+      const o=document.createElement('span');o.className='o';o.textContent=origenTxt(a);
+      const t=document.createElement('span');t.className='t';t.textContent=tamBonito(a.tam||0);
+      const h=document.createElement('span');h.className='h';h.textContent='huella '+a.huella.slice(0,8)+'…'+a.huella.slice(-4);h.title=a.huella;
+      r.append(n,o,t,h);
+      if(editable){const x=document.createElement('button');x.type='button';x.className='x';x.textContent='Quitar';x.addEventListener('click',()=>{lista.splice(i,1);pintarAdj();});r.appendChild(x);}
+      box.appendChild(r);
+    });
+  }
+  function pintarAdj(){
+    pintarSteps($('adjlist'),ADJ,true);pintarSteps($('adjlistF'),ADJF,true);pintarSteps($('adjlistC'),ADJC,true);
+    $('acceptCliRow').hidden=!ADJC.length;
+    $('adjBox').classList.toggle('vacio',!ADJ.length);
+    $('acceptStepRow').hidden=!(MODE==='cliente'&&ADJ.length);
+  }
+  async function registrar(files,lista,origen){
+    for(const f of files){
+      if(!/\.(step|stp)$/i.test(f.name)){alert('"'+f.name+'" no es un archivo STEP (.step o .stp).');continue;}
+      $('adjmsg').textContent='Calculando huella de '+f.name+'…';$('adjmsg').className='msg';
+      try{const h=await huellaDe(f);
+        if(lista.some(a=>a.huella===h)){$('adjmsg').textContent=f.name+' ya estaba registrado.';continue;}
+        const delCliente=lista===ADJF&&((CURDATA&&CURDATA.archivosCliente)||[]).find(a=>a.huella===h);
+        if(lista===ADJF&&origen==='Cliente'&&!delCliente&&((CURDATA&&CURDATA.archivosCliente)||[]).length&&
+           !confirm('"'+f.name+'" NO coincide con el STEP que el cliente marcó como definitivo. ¿Registrarlo de todos modos?'))continue;
+        lista.push({nombre:f.name,tam:f.size,huella:h,origen:delCliente?'Cliente':origen,registrado:new Date().toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})});
+        $('adjmsg').textContent=delCliente?'✅ "'+f.name+'" es exactamente el STEP que envió el cliente ('+delCliente.nombre+').':'';$('adjmsg').className=delCliente?'msg ok':'msg';
+        if(lista===ADJF)msg(delCliente?'✅ El STEP final coincide con el que envió el cliente.':'',delCliente?'ok':'');}
+      catch(e){$('adjmsg').textContent='No se pudo leer '+f.name+'.';$('adjmsg').className='msg err';}
+    }
+    pintarAdj();
+  }
+  $('adjadd').addEventListener('click',()=>$('adjfile').click());
+  $('adjfile').addEventListener('change',async e=>{await registrar(e.target.files,ADJ,$('adjorigen').value);e.target.value='';});
+  $('adjaddC').addEventListener('click',()=>$('adjfileC').click());
+  $('adjfileC').addEventListener('change',async e=>{await registrar(e.target.files,ADJC,'Cliente');e.target.value='';});
+  $('aceptoCli').addEventListener('change',()=>$('acceptCliRow').classList.remove('invalid'));
+  $('adjaddF').addEventListener('click',()=>$('adjfileF').click());
+  $('adjfileF').addEventListener('change',async e=>{await registrar(e.target.files,ADJF,$('adjorigenF').value);e.target.value='';});
+  // Comprobar: ¿este archivo es exactamente el que se registró?
+  $('adjcheck').addEventListener('click',()=>$('chkfile').click());
+  $('chkfile').addEventListener('change',async e=>{
+    const f=e.target.files[0];e.target.value='';if(!f)return;
+    const m=$('adjmsg');m.className='msg';m.textContent='Comprobando '+f.name+'…';
+    const h=await huellaDe(f);
+    const todos=ADJ.map(a=>Object.assign({tipo:'aprobación'},a)).concat(((CURDATA&&CURDATA.archivosCliente)||[]).map(a=>Object.assign({tipo:'STEP que envió el cliente como definitivo'},a)),
+      ((CURDATA&&CURDATA.archivosFinal)||[]).concat(ADJF).map(a=>Object.assign({tipo:'STEP final'},a)));
+    const hit=todos.find(a=>a.huella===h);
+    if(hit){m.className='msg ok';m.textContent='✅ Coincide: es exactamente "'+hit.nombre+'" ('+hit.tipo+(hit.confirmado?', confirmado por el cliente el '+String(hit.confirmado).replace(/^Aprobado el /,''):'')+').';}
+    else{m.className='msg err';m.textContent='❌ No coincide con ningún STEP registrado en este folio. El archivo es distinto (huella '+h.slice(0,8)+'…).';}
+  });
+
   // ----- Vendedor -----
   let CLAVE='',CUR=null,CURDATA=null,LISTA=[],USER={admin:true};
+  function CURTOKEN(){return CUR;}
   async function entrar(silent){
     if(!CLAVE){gmsg('Escribe la clave.','err');return;}
     gmsg('Verificando…');$('entrar').disabled=true;
@@ -830,7 +957,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       cargarLista();
     }catch(e){
       try{sessionStorage.removeItem('innovart_clave');}catch(x){}
-      gmsg(silent?'':(e.server==='clave'?'Clave incorrecta.':'No se pudo conectar. Revisa tu internet e inténtalo de nuevo.'),'err');
+      gmsg(silent&&e.server!=='bloqueado'?'':(e.server==='clave'?'Clave incorrecta. Después de 3 intentos se bloquea 15 minutos.':e.server==='bloqueado'?'Demasiados intentos con clave equivocada. Por seguridad, espera 15 minutos e inténtalo de nuevo.':'No se pudo conectar. Revisa tu internet e inténtalo de nuevo.'),'err');
     }
     $('entrar').disabled=false;
   }
@@ -891,7 +1018,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     try{const d=new Date();fecha.value=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}catch(e){}
     fecha.readOnly=false;
     try{const v=localStorage.getItem('innovart_vendedor');if(v)$('vendedor').value=v;}catch(e){}
-    planos.innerHTML='';$('planos2').innerHTML='';$('planosFin').innerHTML='';
+    planos.innerHTML='';$('planos2').innerHTML='';$('planosFin').innerHTML='';ADJ=[];ADJF=[];ADJC=[];$('adjmsg').textContent='';pintarAdj();
     signed=false;document.body.classList.remove('signed');drop.style.display='';drop.classList.remove('invalid');
     $('vres').hidden=true;$('estadoBox').hidden=true;$('incorp').hidden=true;$('finalBox').hidden=true;$('avisar').hidden=true;
     $('vend').hidden=false;$('generar').hidden=false;$('generar').textContent='Generar enlace para cliente';$('wa').textContent='Enviar enlace por WhatsApp';
@@ -919,8 +1046,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
       $('correoV').value=d.correoVendedor||$('correoV').value;$('waC').value=d.whatsapp||'';fijarUsuario();
       if(d.folioAnterior){$('revnota').textContent='Rev '+d.revision+' del proyecto '+d.codigo+', viene del folio '+d.folioAnterior+'.';}
       (d.planos||[]).forEach(p=>addItem(p.src,p.cap));
+      ADJ=(d.archivos||[]).slice();ADJF=[];pintarAdj();
       $('vestado').appendChild(badge(d.estado));
-      $('vlink').value=d.enlace||BASE+'?f='+token;$('vres').hidden=false;
+      $('vlink').value=d.enlace||BASE+'?f='+token;$('vres').hidden=false;$('liberar').hidden=!d.vinculado;
       $('wa').textContent={'Pendiente':'Enviar enlace por WhatsApp','Firmado':'Confirmar recepción por WhatsApp','Firmado con observaciones':'Avisar que estamos incorporando','Observaciones incorporadas':'Avisar al cliente por WhatsApp'}[d.estado]||'Enviar por WhatsApp';
       if(d.estado==='Pendiente'){
         $('generar').textContent='Guardar cambios';
@@ -956,6 +1084,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
       if(d.whatsapp)$('waC').value=d.whatsapp;
       prefolio();msg('Sube el plano actualizado y guarda.','ok');});
     $('vrecargar').addEventListener('click',cargarLista);
+    $('liberar').addEventListener('click',async()=>{
+      if(!CUR)return;
+      if(!confirm('¿Liberar el enlace? El cliente podrá abrirlo en otro celular o computadora; quedará ligado al primer dispositivo donde lo abra.'))return;
+      try{await api('liberar',{clave:CLAVE,token:CUR});$('liberar').hidden=true;msg('Enlace liberado. Pide al cliente que lo abra de nuevo en su dispositivo.','ok');}
+      catch(e){msg('No se pudo liberar el enlace. Inténtalo de nuevo.','err');}
+    });
     $('vnuevo').addEventListener('click',()=>{limpiarFormulario();mostrarFormulario();$('vestado').appendChild(badge('Nuevo'));$('rev').value='A';prefolio();});
     $('volver').addEventListener('click',()=>{document.body.classList.remove('editing');$('backbar').hidden=true;msg('');cargarLista();window.scrollTo(0,0);});
 
@@ -971,9 +1105,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
       try{
         const datos={clave:CLAVE,folio:$('folio').value.trim(),fecha:$('fecha').value,cliente:$('cliente').value.trim(),
           codigo:$('codigo').value.trim(),vendedor:$('vendedor').value.trim(),correoVendedor:$('correoV').value.trim(),
-          whatsapp:telDig($('waC').value),planos:await planosParaEnviar(planos)};
+          whatsapp:telDig($('waC').value),planos:await planosParaEnviar(planos),archivos:ADJ};
         const r=CUR?await api('editar',Object.assign({token:CUR},datos)):await api('crear',Object.assign({base:BASE},datos));
         const nuevo=!CUR;CUR=r.token;if(r.folio)$('folio').value=r.folio;
+        if(r.archivos){ADJ=r.archivos.slice();pintarAdj();}
         $('vlink').value=r.enlace||BASE+'?f='+r.token;$('vres').hidden=false;btn.textContent='Guardar cambios';
         $('rev').value=r.revision||'A';$('revnota').className='revnota';
         $('revnota').textContent=r.folioAnterior?'Rev '+r.revision+' del proyecto '+$('codigo').value.trim()+', viene del folio '+r.folioAnterior+'.':'';
@@ -985,6 +1120,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
           no_editable:'Este formato ya fue firmado y no se puede editar.',
           rev_pendiente:'Este código de diseño tiene un folio pendiente de firma'+(e.data&&e.data.folio?' ('+e.data.folio+')':'')+'. Edita ese folio en lugar de crear otro; si es de otro vendedor, pídeselo a esa persona o a administración.',
           ajeno:'Este formato es de otro vendedor; no lo puedes modificar.',
+          archivo_invalido:'Solo se pueden registrar archivos STEP (.step o .stp).',
+          bloqueado:'Demasiados intentos con clave equivocada. Espera 15 minutos.',
           codigo_bloqueado:'No se puede cambiar el código: ese proyecto ya tiene varias revisiones o el código nuevo ya existe.'}[e.server]||'No se pudo guardar en Drive. Revisa tu conexión e inténtalo de nuevo.','err');
       }
       btn.disabled=false;
@@ -1008,15 +1145,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
     $('incorporar').addEventListener('click',async()=>{
       const nota=$('nota').value.trim();
-      const hay=$('planos2').children.length>0;
+      const hay=$('planos2').children.length>0||ADJF.length>0;
       if(!nota)$('nota').classList.add('invalid');if(!hay)$('drop2').classList.add('invalid');
-      if(!nota||!hay){msg('Para confirmar, '+[hay?'':'adjunta el plano final',nota?'':'escribe qué se incorporó'].filter(Boolean).join(' y ')+'.','err');return;}
+      if(!nota||!hay){msg('Para confirmar, '+[hay?'':'adjunta el plano final o registra el STEP final',nota?'':'escribe qué se incorporó'].filter(Boolean).join(' y ')+'.','err');return;}
       const btn=$('incorporar');btn.disabled=true;msg('Guardando la incorporación…');
       try{
         const pl=await planosParaEnviar($('planos2'));
         const cuando=new Date().toLocaleString('es-MX',{dateStyle:'long',timeStyle:'short'});
         const pdf=await buildConstancia(CURDATA,nota,cuando,pl);
-        await api('incorporar',{clave:CLAVE,token:CUR,nota,incorporadoEl:cuando,planosFinal:pl,constancia:b64(pdf)});
+        await api('incorporar',{clave:CLAVE,token:CUR,nota,incorporadoEl:cuando,planosFinal:pl,constancia:b64(pdf),archivosFinal:ADJF});
         await abrir(CUR);
         msg('Listo: se guardó la constancia en Drive. Ahora avisa al cliente con el botón de WhatsApp.','ok');
         $('avisar').scrollIntoView({behavior:'smooth',block:'center'});
@@ -1051,6 +1188,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
     campo('Aprobación firmada el',d.firmadoEl);campo('Firmó',[d.nombre,d.puesto].filter(Boolean).join(' · '));
     campo('Observaciones del cliente',d.observaciones);campo('Qué incorporó Innovart',nota);
     campo('Incorporado el',cuando);if(d.vendedor)campo('Vendedor',d.vendedor);
+    if((d.archivos||[]).length)campo('Archivo 3D aprobado (recibido por WhatsApp)',d.archivos.map(a=>a.nombre+' · '+tamBonito(a.tam)+' · '+origenTxt(a)+' · SHA-256 '+a.huella).join('   |   '));
+    if((d.archivosCliente||[]).length)campo('STEP definitivo del cliente',d.archivosCliente.map(a=>a.nombre+' · '+tamBonito(a.tam)+' · Elaborado por el cliente · SHA-256 '+a.huella).join('   |   '));
+    if(ADJF.length)campo('STEP final',ADJF.map(a=>a.nombre+' · '+tamBonito(a.tam)+' · '+origenTxt(a)+' · SHA-256 '+a.huella).join('   |   '));
     const leg=wrap(safe('El plano final anexo incorpora las observaciones que el cliente registró al firmar el formato de aprobación del folio indicado. Conforme al punto 5 de los términos y condiciones, el plano final se considera conforme a lo solicitado por el cliente.',F),F,7,CW);
     if(y-leg.length*9<M+16){page=doc.addPage([W,H]);y=H-M;}
     leg.forEach(l=>{page.drawText(l,{x:M,y:y-8,size:7,font:F,color:grey});y-=9;});
@@ -1073,11 +1213,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
   // ----- Cliente -----
   if(MODE==='cliente'){
     $('cload').hidden=false;
-    (async()=>{
+    const cargar=async()=>{
       try{
         const r=await api('ver',{token:TOKEN});
         $('folio').value=r.folio||'';$('fecha').value=r.fecha||'';$('cliente').value=r.cliente||'';$('codigo').value=r.codigo||'';$('rev').value=r.revision||'A';fixedRO();
         (r.planos||[]).forEach(p=>addItem(p.src,p.cap));
+        CURDATA=r;ADJ=(r.archivos||[]).slice();$('adjBox').classList.add('solo-ver');pintarAdj();
         document.body.classList.add('ready');$('cload').hidden=true;
         if(r.estado&&r.estado!=='Pendiente'){
           document.body.classList.add('closed');pintarEstado(r);
@@ -1085,9 +1226,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
             'Este formato ya fue firmado. Si necesitas un cambio, comunícate con Innovart.','ok');
         }
       }catch(e){
-        $('cloadtxt').textContent=e.server==='no_existe'?'Este enlace no es válido o ya no está disponible. Pide uno nuevo a tu vendedor de Innovart.':'No se pudo cargar el formato. Revisa tu conexión y recarga la página.';
+        const sv=e.server;
+        $('cloadtxt').textContent=sv==='no_existe'?'Este enlace no es válido o ya no está disponible. Pide uno nuevo a tu vendedor de Innovart.':
+          sv==='otro_dispositivo'?'Por seguridad, este enlace solo funciona en el dispositivo donde se abrió la primera vez. Si cambiaste de celular o computadora, pide a tu vendedor de Innovart que libere el enlace.':
+          'No se pudo cargar el formato. Revisa tu conexión y recarga la página.';
       }
-    })();
+    };
+    cargar();
   }
   async function enviar(){
     $('borrar').hidden=true;$('reenviar').hidden=true;
@@ -1095,11 +1240,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
     try{
       const bytes=await buildPdf();
       await api('firmar',{token:TOKEN,pdf:b64(bytes),nombre:$('nombre').value.trim(),puesto:$('puesto').value.trim(),
-        observaciones:$('observaciones').value.trim(),firmadoEl:$('stamp').textContent});
+        observaciones:$('observaciones').value.trim(),firmadoEl:$('stamp').textContent,recibioStep:$('aceptoStep').checked,stepsCliente:ADJC,stepDefinitivo:$('aceptoCli').checked});
       enviado=true;
       msg('Innovart recibió tu aprobación. Puedes guardar una copia con "Guardar PDF".','ok');
     }catch(e){
       if(e.server==='ya_firmado'){enviado=true;msg('Este formato ya había sido firmado anteriormente. Si necesitas un cambio, comunícate con Innovart.','err');return;}
+      if(e.server==='falta_step_cliente'||e.server==='falta_step'){$('reenviar').hidden=false;msg('Falta confirmar la casilla del archivo STEP.','err');return;}
+      if(e.server==='otro_dispositivo'){msg('Por seguridad, este enlace solo funciona en el dispositivo donde se abrió la primera vez. Pide a tu vendedor de Innovart que lo libere.','err');return;}
       $('reenviar').hidden=false;$('borrar').hidden=false;
       msg('No se pudo enviar a Innovart. Revisa tu conexión y presiona "Reintentar envío".','err');
     }
