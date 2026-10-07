@@ -188,6 +188,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .revnota{font-size:.8rem;color:var(--muted);margin-top:4px}
 .revnota:empty{display:none}
 .revnota.err{color:var(--err)}
+.vig{display:inline-block;margin-left:8px;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:3px;background:#DDF3E4;color:#1E5C36;vertical-align:middle}
+.vitem.reemp{opacity:.62}
 /* Celular */
 @media (max-width:720px){
   .wrap{padding:12px 10px 28px}
@@ -856,6 +858,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       x.items.forEach(i=>{
         const b=document.createElement('button');b.type='button';b.className='vitem';
         const f=document.createElement('span');f.className='f';f.textContent='Rev '+i.revision+' · Folio '+i.folio;
+        if(i===x.ultimo){const vg=document.createElement('span');vg.className='vig';vg.textContent='Vigente';f.appendChild(vg);}else{b.classList.add('reemp');}
         const c=document.createElement('span');c.className='c';c.textContent=fechaBonita(i.fecha)+(i.vendedor?' · '+i.vendedor:'')+(i.folioAnterior?' · viene del folio '+i.folioAnterior:'');
         const e=document.createElement('span');e.className='e';e.appendChild(badge(i.estado));
         b.append(f,e,c);b.addEventListener('click',()=>abrir(i.token));g.appendChild(b);
