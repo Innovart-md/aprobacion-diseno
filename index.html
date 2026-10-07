@@ -774,7 +774,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   async function api(action,data){
     const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action},data||{}))});
     let j;try{j=await res.json();}catch(e){throw new Error('respuesta');}
-    if(!j.ok){const err=new Error(j.error||'error');err.server=j.error;throw err;}
+    if(!j.ok){const err=new Error(j.error||'error');err.server=j.error;err.data=j;throw err;}
     return j;}
   function telDig(x){return String(x||'').replace(/\D/g,'');}
   function telOk(x){const d=telDig(x);return d.length===10||(d.length>=12&&d.length<=13);}
@@ -815,12 +815,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
   }
 
   // ----- Vendedor -----
-  let CLAVE='',CUR=null,CURDATA=null,LISTA=[];
+  let CLAVE='',CUR=null,CURDATA=null,LISTA=[],USER={admin:true};
   async function entrar(silent){
     if(!CLAVE){gmsg('Escribe la clave.','err');return;}
     gmsg('Verificando…');$('entrar').disabled=true;
     try{
-      await api('check',{clave:CLAVE});
+      const u=await api('check',{clave:CLAVE});
+      USER={admin:u.admin!==false,nombre:u.nombre||'',correo:u.correo||''};
+      $('tagv').textContent=USER.admin?'Modo vendedor · Administración':'Modo vendedor · '+USER.nombre;
       try{sessionStorage.setItem('innovart_clave',CLAVE);}catch(e){}
       document.body.classList.add('auth');$('gate').hidden=true;$('vpanel').hidden=false;gmsg('');
       cargarLista();
@@ -892,6 +894,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
     $('vres').hidden=true;$('estadoBox').hidden=true;$('incorp').hidden=true;$('finalBox').hidden=true;$('avisar').hidden=true;
     $('vend').hidden=false;$('generar').hidden=false;$('generar').textContent='Generar enlace para cliente';$('wa').textContent='Enviar enlace por WhatsApp';
     $('vestado').innerHTML='';msg('');CUR=null;CURDATA=null;
+    fijarUsuario();
+  }
+  // Un vendedor no puede cambiar su nombre ni su correo: vienen de su clave
+  function fijarUsuario(){
+    if(USER.admin){$('correoV').readOnly=false;return;}
+    $('vendedor').value=USER.nombre;$('vendedor').readOnly=true;fecha.readOnly=true;
+    $('correoV').value=USER.correo;$('correoV').readOnly=true;
   }
   async function prefolio(){
     $('folio').value='';$('folio').placeholder='Asignando…';
@@ -905,7 +914,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       const d=await api('abrir',{clave:CLAVE,token});
       limpiarFormulario();CUR=token;CURDATA=d;
       $('folio').value=d.folio;fecha.value=d.fecha;$('cliente').value=d.cliente;$('codigo').value=d.codigo||'';$('vendedor').value=d.vendedor||'';$('rev').value=d.revision||'A';
-      $('correoV').value=d.correoVendedor||$('correoV').value;$('waC').value=d.whatsapp||'';
+      $('correoV').value=d.correoVendedor||$('correoV').value;$('waC').value=d.whatsapp||'';fijarUsuario();
       if(d.folioAnterior){$('revnota').textContent='Rev '+d.revision+' del proyecto '+d.codigo+', viene del folio '+d.folioAnterior+'.';}
       (d.planos||[]).forEach(p=>addItem(p.src,p.cap));
       $('vestado').appendChild(badge(d.estado));
@@ -925,7 +934,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
         $('nuevarev').hidden=!d.esUltima;
       }
       mostrarFormulario();vmsg('');
-    }catch(e){vmsg(e.server==='no_existe'?'Ese formato ya no existe.':'No se pudo abrir el formato. Inténtalo de nuevo.','err');}
+    }catch(e){vmsg(e.server==='no_existe'?'Ese formato ya no existe.':e.server==='ajeno'?'Ese formato es de otro vendedor; solo quien lo creó o administración pueden abrirlo.':'No se pudo abrir el formato. Inténtalo de nuevo.','err');}
   }
 
   if(MODE==='vendedor'){
@@ -940,7 +949,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     $('codigo').addEventListener('input',notaRevision);
     $('nuevarev').addEventListener('click',()=>{
       const d=CURDATA;limpiarFormulario();
-      $('cliente').value=d.cliente;$('codigo').value=d.codigo;$('codigo').readOnly=true;if(d.vendedor)$('vendedor').value=d.vendedor;
+      $('cliente').value=d.cliente;$('codigo').value=d.codigo;$('codigo').readOnly=true;if(d.vendedor&&USER.admin)$('vendedor').value=d.vendedor;
       notaRevision();$('vestado').appendChild(badge('Nueva revisión'));mostrarFormulario();
       if(d.whatsapp)$('waC').value=d.whatsapp;
       prefolio();msg('Sube el plano actualizado y guarda.','ok');});
@@ -972,7 +981,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
       }catch(e){
         msg({clave:'La clave ya no es válida. Recarga la página y vuelve a entrar.',folio_existe:'Ya existe un formato con ese folio. Búscalo en la lista para editarlo.',
           no_editable:'Este formato ya fue firmado y no se puede editar.',
-          rev_pendiente:'Este código de diseño tiene un folio pendiente de firma. Ábrelo desde la lista y edítalo en lugar de crear otro.',
+          rev_pendiente:'Este código de diseño tiene un folio pendiente de firma'+(e.data&&e.data.folio?' ('+e.data.folio+')':'')+'. Edita ese folio en lugar de crear otro; si es de otro vendedor, pídeselo a esa persona o a administración.',
+          ajeno:'Este formato es de otro vendedor; no lo puedes modificar.',
           codigo_bloqueado:'No se puede cambiar el código: ese proyecto ya tiene varias revisiones o el código nuevo ya existe.'}[e.server]||'No se pudo guardar en Drive. Revisa tu conexión e inténtalo de nuevo.','err');
       }
       btn.disabled=false;
