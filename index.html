@@ -268,6 +268,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   .stamp{font-size:6pt;color:#000}
   .pad .state{font-size:6pt}
 }
+.quien{font-size:13px;color:#6b6b6b;margin-top:2px}
 </style>
 <script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -304,7 +305,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   <p id="cloadtxt">Cargando formato…</p>
 </div>
 <section class="vpanel" id="vpanel" hidden>
-  <div class="vhead"><h2>Formatos de aprobación</h2><button type="button" class="primary" id="vnuevo">Nuevo formato</button></div>
+  <div class="vhead"><div><h2>Formatos de aprobación</h2><div class="quien" id="quien"></div></div><button type="button" class="primary" id="vnuevo">Nuevo formato</button></div>
   <div class="vtools"><input type="text" id="vbuscar" placeholder="Buscar por folio, cliente o código de diseño"><button type="button" id="vrecargar">Actualizar</button></div>
   <div class="vlist" id="vlist"></div>
   <div class="msg" id="vmsg" role="status"></div>
@@ -823,6 +824,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       const u=await api('check',{clave:CLAVE});
       USER={admin:u.admin!==false,nombre:u.nombre||'',correo:u.correo||''};
       $('tagv').textContent=USER.admin?'Modo vendedor · Administración':'Modo vendedor · '+USER.nombre;
+      $('quien').textContent=USER.admin?'Administración · ves los formatos de todos':USER.nombre+' · solo tus formatos';
       try{sessionStorage.setItem('innovart_clave',CLAVE);}catch(e){}
       document.body.classList.add('auth');$('gate').hidden=true;$('vpanel').hidden=false;gmsg('');
       cargarLista();
