@@ -362,7 +362,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <span class="lab">Archivo 3D (STEP) · se envía por WhatsApp</span>
     <div class="adjlist" id="adjlist"></div>
     <div class="adjctl" id="adjctl">
-      <select id="adjorigen" aria-label="Origen del archivo"><option value="Innovart">Elaborado por Innovart</option><option value="Cliente">Elaborado por el cliente</option></select>
+      <select id="adjorigen" aria-label="Origen del archivo" hidden><option value="Innovart">Elaborado por Innovart</option></select>
       <button type="button" class="adjadd" id="adjadd">+ Registrar archivo STEP</button>
       <button type="button" class="adjcheck" id="adjcheck">Comprobar un STEP</button>
     </div>
@@ -392,7 +392,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <input type="file" id="file2" accept="image/*,application/pdf,.pdf" multiple hidden>
     <span class="lab">STEP final (opcional)</span>
     <div class="adjlist" id="adjlistF"></div>
-    <div class="adjctl"><select id="adjorigenF" aria-label="Origen del STEP final"><option value="Cliente">Elaborado por el cliente</option><option value="Innovart">Elaborado por Innovart</option></select>
+    <div class="adjctl"><select id="adjorigenF" aria-label="Origen del STEP final" hidden><option value="Innovart">Elaborado por Innovart</option></select>
       <button type="button" class="adjadd" id="adjaddF">+ Registrar STEP final</button></div>
     <input type="file" id="adjfileF" accept=".step,.stp,.STEP,.STP" multiple hidden>
     <label class="lab" for="nota">Qué se incorporó</label>
@@ -435,7 +435,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <label class="lab" for="observaciones">Observaciones y notas</label>
     <p class="obs-help no-print">Anota aquí los cambios finales al diseño. Lo que quede escrito al firmar es definitivo.</p>
     <textarea id="observaciones" rows="4" placeholder="Ej. Cambiar barreno central a Ø10 mm; sin pintura en la base"></textarea>
-    <div class="stepcli no-print" id="stepCli">
+    <div class="stepcli no-print" id="stepCli" hidden>
       <span class="lab">¿Envías tu propio archivo STEP? · opcional</span>
       <p class="obs-help">Si tienes un STEP con tus cambios, regístralo aquí y mándalo por WhatsApp a tu vendedor. El archivo no se sube: solo se guarda su huella digital, para que Innovart compruebe que usa exactamente el que tú indicaste.</p>
       <div class="adjlist" id="adjlistC"></div>
