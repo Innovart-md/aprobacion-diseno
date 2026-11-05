@@ -1,1 +1,1 @@
-window.INNOVART_API = 'https://script.google.com/macros/s/AKfycbwL_frxHRo5DHCK2w-QF__SDyABFwcNwC9pn-py4et5uHYvlX9bS3HfdHzvRcCACtdTxQ/exec';
+window.INNOVART_API='https://script.google.com/macros/s/AKfycbwUOrLylSSiKR_aQlll5Mtf7ImK0RGa-pbkNWagYR5p-7pr541BWaChvCb74y4s9EpEmw/exec';
